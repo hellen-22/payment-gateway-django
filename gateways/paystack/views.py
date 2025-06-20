@@ -31,7 +31,7 @@ class PaystackPaymentViewSet(viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         """
-        Retrieve a specific Paystack transaction by its ID.
+        Retrieve a specific Paystack transaction by its reference.
         """
         try:
             transaction = PaystackTransaction.objects.get(reference=pk)
@@ -53,23 +53,25 @@ class PaystackPaymentVerificationViewSet(viewsets.ViewSet):
         payment_gateway = PaystackPaymentGateway()
         try:
             res = payment_gateway.verify_payment(reference)
-            data = res.get("data", {})
-            res_data = {
-                "status": data.get("status"),
-                "email": data.get("customer", {}).get("email"),
-                "name": data.get("metadata", {}).get("name"),
-                "amount": data.get("amount") / 100,
-                "message": data.get("gateway_response"),
+            response_data = res.get("data", {})
+            data = {
+                "status": response_data.get("status"),
+                "email": response_data.get("customer", {}).get("email"),
+                "name": response_data.get("metadata", {}).get("name"),
+                "amount": response_data.get("amount") / 100,
+                "message": response_data.get("gateway_response"),
             }
 
-            if res_data["status"] == "success":
-                PaystackTransaction.objects.create(
+            if data["status"] == "success":
+                PaystackTransaction.objects.update_or_create(
                     reference=reference,
-                    customer_email=res_data["email"],
-                    customer_name=res_data["name"],
-                    amount=res_data["amount"],
-                    status=res_data["status"],
+                    defaults={
+                        "customer_email": data["email"],
+                        "customer_name": data["name"],
+                        "amount": data["amount"],
+                        "status": data["status"],
+                    },
                 )
-            return response.Response(res_data, status=status.HTTP_200_OK)
+            return response.Response(data, status=status.HTTP_200_OK)
         except PaymentErrorException as e:
             return response.Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
