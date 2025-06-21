@@ -19,7 +19,7 @@ class PaystackBaseTestSetUp(APITestCase):
         self.current_count = PaystackTransaction.objects.count()
 
         self.payment_url = reverse("paystack-payment-list")
-        self.retrieve_url = reverse("paystack-payment-detail", kwargs={"pk": self.transaction.reference})
+        self.retrieve_url = reverse("paystack-payment-detail", kwargs={"reference": self.transaction.reference})
         self.verify_url = reverse("paystack-verification-verify-payment", kwargs={"reference": self.reference})
 
 
@@ -101,7 +101,7 @@ class TestRetrievePaystackTransaction(PaystackBaseTestSetUp):
         self.assertEqual(response.data["customer_email"], self.transaction.customer_email)
 
     def test_retrieve_transaction_not_found(self):
-        invalid_url = reverse("paystack-payment-detail", kwargs={"pk": "invalid_reference"})
+        invalid_url = reverse("paystack-payment-detail", kwargs={"reference": "invalid_reference"})
         response = self.client.get(invalid_url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

@@ -1,3 +1,4 @@
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import decorators, response, status, viewsets
 
 from gateways.paystack.exceptions import PaymentErrorException
@@ -7,13 +8,21 @@ from gateways.paystack.utils import PaystackPaymentGateway
 
 
 class PaystackPaymentViewSet(viewsets.ViewSet):
-    """
-    Handling Paystack payment operations.
+    lookup_field = "reference"
 
-    This endpoint allows you to create a payment by providing the customer's name, email, and the amount to be charged.
-    """
-
+    @swagger_auto_schema(
+        request_body=PaymentSerializer,
+        responses={
+            200: PaymentSerializer,
+            400: "Bad Request",
+        },
+    )
     def create(self, request):
+        """
+        Handling Paystack payment operations.
+
+        This endpoint allows you to create a payment by providing the customer's name, email, and the amount.
+        """
         serializer = PaymentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -29,12 +38,14 @@ class PaystackPaymentViewSet(viewsets.ViewSet):
         except PaymentErrorException as e:
             return response.Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, reference=None):
         """
+        Handling Paystack transaction retrieval.
+
         Retrieve a specific Paystack transaction by its reference.
         """
         try:
-            transaction = PaystackTransaction.objects.get(reference=pk)
+            transaction = PaystackTransaction.objects.get(reference=reference)
             serializer = PaystackTransactionSerializer(transaction)
             return response.Response(serializer.data, status=status.HTTP_200_OK)
         except PaystackTransaction.DoesNotExist:
